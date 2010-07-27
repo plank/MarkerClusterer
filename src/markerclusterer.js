@@ -44,6 +44,8 @@
  *                cluster.
  *     'zoomOnClick': (boolean) Whether the default behaviour of clicking on a
  *                    cluster is to zoom into it.
+ *      'infoOnClick': (boolean) Whether we want to activate infoOnClick
+ *      'infoOnClickZoom': (number) What zoom level we have to be in for infoOnClick to trigger
  *     'styles': (object) An object that has style properties:
  *       'url': (string) The image url.
  *       'height': (number) The image height.
@@ -78,6 +80,19 @@ function MarkerClusterer(map, opt_markers, opt_options) {
   this.imageExtension_ = options['imageExtension'] ||
       this.MARKER_CLUSTER_IMAGE_EXTENSION_;
   this.zoomOnClick_ = options['zoomOnClick'] || true;
+
+
+  // infoOnClick functionality will play nice with zoomOnClick
+  // Added this functionality since we will have multiple events at the same address, so they were overlapping each other. 
+  // This allow clustering to be turned on all the way to zoom level 0.
+  // infoOnClick: Whether we show the InfoWindow Content for all the markers in the cluster on click.
+  // infoOnClickZoom: The zoom threshold that infoOnClick will trigger if its turned on. 
+  //      So, once you zoomed in @ this level or closer, it will overide zoomOnClick and 
+  //      instead display an infowindow with the info from all the markers.
+  this.infoOnClick_ = options['infoOnClick'] || false;
+
+  //Threshold zoom level under which we show info instead of zoomOnClick
+  this.infoOnClickZoom_ = options['infoOnClickZoom'] || 0;
 
   this.setupStyles_();
 
@@ -215,6 +230,26 @@ MarkerClusterer.prototype.getStyles = function() {
  */
 MarkerClusterer.prototype.isZoomOnClick = function() {
   return this.zoomOnClick_;
+};
+
+
+/**
+ * Whether info on click is set.
+ *
+ * @return {boolean} True if infoOnClick_ is set.
+ */
+MarkerClusterer.prototype.isInfoOnClick = function() {
+  return this.infoOnClick_;
+};
+
+
+/**
+ * The Info on Click Zoom Level
+ *
+ * @return {int} The zoom level threshold
+ */
+MarkerClusterer.prototype.getInfoOnClickZoom = function() {
+  return this.infoOnClickZoom_;
 };
 
 
@@ -797,18 +832,36 @@ function ClusterIcon(cluster, styles, opt_padding) {
  * Triggers the clusterclick event and zoom's if the option is set.
  */
 ClusterIcon.prototype.triggerClusterClick = function() {
-  var markerClusterer = this.cluster_.getMarkerClusterer();
+    var markerClusterer = this.cluster_.getMarkerClusterer();
 
-  // Trigger the clusterclick event.
-  google.maps.event.trigger(markerClusterer, 'clusterclick', [this.cluster_]);
+    // Trigger the clusterclick event.
+    google.maps.event.trigger(markerClusterer, 'clusterclick', [this.cluster_]);
 
-  if (markerClusterer.isZoomOnClick()) {
-    // Center the map on this cluster.
-    this.map_.panTo(this.cluster_.getCenter());
+    //Info on click
+    var infoOnClick = (markerClusterer.isInfoOnClick() && this.map_.getZoom() >= markerClusterer.getInfoOnClickZoom());
+    if(infoOnClick) {
 
-    // Zoom into the cluster.
-    this.map_.fitBounds(this.cluster_.getBounds());
-  }
+        var markers = this.cluster_.markers_,
+            infoContent = [];
+
+        // Set up the info window for the cluster.
+        // We look for the special property on the marker called content - this is a custom property we added which contains the
+        // html for the marker. If it doesn't exist, we fall back to title.
+        for (var i=0; i < markers.length; i++) {
+            var content = (markers[i].content !== undefined && markers[i].content != '') ? markers[i].content : markers[i].title ;
+            infoContent.push(content);
+        };
+
+       var clusterInfoWindow = new google.maps.InfoWindow({content: infoContent.join('<br>')});
+       clusterInfoWindow.open(this.map_, markers[0]);
+    }
+    else if (markerClusterer.isZoomOnClick()) {
+        // Center the map on this cluster.
+        this.map_.panTo(this.cluster_.getCenter());
+
+        // Zoom into the cluster.
+        this.map_.fitBounds(this.cluster_.getBounds());
+    }
 };
 
 
