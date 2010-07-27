@@ -4,6 +4,7 @@
 // ==/ClosureCompiler==
 
 /**
+ * http://code.google.com/p/google-maps-utility-library-v3/wiki/Libraries
  * @name MarkerClusterer for Google Maps v3
  * @version version 1.0
  * @author Luke Mahe
