@@ -229,12 +229,12 @@ MarkerClusterer.prototype.getMarkers = function() {
 
 
 /**
- *  Returns the array of markers in the clusterer.
+ *  Returns the number of markers in the clusterer.
  *
- *  @return {Array.<google.maps.Marker>} The number of markers.
+ *  @return {number} The number of markers.
  */
 MarkerClusterer.prototype.getTotalMarkers = function() {
-  return this.markers_;
+  return this.markers_.length;
 };
 
 
