@@ -2,7 +2,17 @@
 // @compilation_level ADVANCED_OPTIMIZATIONS
 // @externs_url http://closure-compiler.googlecode.com/svn/trunk/contrib/externs/google_maps_api_v3.js
 // ==/ClosureCompiler==
-
+/**
+ * Here is how to compile using closure:
+ * The above @externs_url seems to be depreciated. 
+ * Use http://closure-compiler.googlecode.com/svn/trunk/contrib/externs/maps/google_maps_api_v3.js instead.
+ * 
+ * wget http://closure-compiler.googlecode.com/svn/trunk/contrib/externs/maps/google_maps_api_v3.js 
+ * file to the same directory. You will be passing it to the --externs flag
+ *
+ * java -jar /Path/to/compiler.jar --externs google_maps_api_v3.js --js markerclusterer.js --js_output_file markerclusterer_compiled.js --compilation_level ADVANCED_OPTIMIZATIONS  --output_wrapper "(function(){%output%})();"
+ * 
+ */
 /**
  * http://code.google.com/p/google-maps-utility-library-v3/wiki/Libraries
  * @name MarkerClusterer for Google Maps v3
@@ -1049,7 +1059,6 @@ ClusterIcon.prototype.createCss = function(pos) {
       txtSize + 'px; font-family:Arial,sans-serif; font-weight:bold');
   return style.join('');
 };
-
 
 // Export Symbols for Closure
 // If you are not going to compile with closure then you can remove the
