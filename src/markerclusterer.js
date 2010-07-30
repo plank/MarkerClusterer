@@ -99,6 +99,7 @@ function MarkerClusterer(map, opt_markers, opt_options) {
   // infoOnClickZoom: The zoom threshold that infoOnClick will trigger if its turned on. 
   //      So, once you zoomed in @ this level or closer, it will overide zoomOnClick and 
   //      instead display an infowindow with the info from all the markers.
+  //      Looks for a new property on the marker called content, otherwise falls back on title property
   this.infoOnClick_ = options['infoOnClick'] || false;
 
   //Threshold zoom level under which we show info instead of zoomOnClick
