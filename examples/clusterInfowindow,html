@@ -1,0 +1,795 @@
+<!-- Loading graphic -->
+<div id="overlay">
+    <div id="loading-screen">
+	<h3>
+	    Loading Map...
+	</h3>
+	<div id="facebookG">
+	    <div id="blockG_1" class="facebook_blockG">
+	    </div>
+	    <div id="blockG_2" class="facebook_blockG">
+	    </div>
+	    <div id="blockG_3" class="facebook_blockG">
+	    </div>
+	</div>
+    </div>
+</div>
+
+<div id="map_canvas" style="width:100%;height:100%; clear:both;" >
+
+</div>
+<div class="map-title visible-desktop">
+    <h2>
+      <%= link_to '', root_path, :class=>'logo-beta sprites-main', :title=>'Lokeel'%>
+    </h2>
+  </div>
+<!--<%= render 'layouts/pincategory'%>
+<%#= render 'application/share/timeselect'%>-->
+<%= render 'application/share/map_info_popup'%>
+
+
+
+<!--
+<div class="categories_btn visible-desktop">
+  <input onclick="change()" type="button" value="Category: All ►" id="pop" />
+  <input onclick="change1()" type="button" value="Time: Latest ►" id="pop1" />
+</div>-->
+
+
+<%= javascript_tag do %>
+var foo = "<%= escape_javascript(render :partial => 'locations/form') %>";
+
+//functino create for the popup locatin creation
+function myFunction(){
+  var id = document.getElementById("location_pin_id").value;
+
+  $.ajax({
+    data: 'id=' + id,
+    type: "GET",
+    url: "/getdata",
+    async: false,
+    dataType: "script"
+  });
+}
+  function myClosePopup()
+  {
+    document.getElementById('submit_form').style.display = "none";
+    }
+
+// function for the submit button to unlock the map
+function unlock(){
+  check = 1;
+}
+
+function unlock1(){
+  check = 1;
+}
+
+//<![CDATA[
+// global "map" variable
+  var markersArray = [];
+  var mapVar = []
+  var gmarkers = [];
+  var my = [];
+  var hideMarker = [];
+  var map = null;
+  var marker = null;
+  var gmarker = null;
+  var autocomplete;
+  var chkHash = null;
+  // Show Marker Info window
+  var showMarkerInfo = false;
+  var markerDetails;
+
+  //for sensor support
+  var browserSupportFlag =  new Boolean();
+  var grayStyles = [{ "elementType": "labels.text.stroke", "stylers": [ { "color": "#eceef3" } ] },{ "elementType": "labels.text.fill", "stylers": [ { "color": "#292d36" } ] },{ "elementType": "geometry.fill", "stylers": [ { "saturation": 0 }, { "hue": "#8d74c0" } ] },{ "elementType": "geometry.stroke", "stylers": [ { "hue": "#c1bbde" } ] },{ "featureType": "water", "elementType": "geometry.fill", "stylers": [ { "lightness": -100 } ] }
+		];
+  var infowindow = new google.maps.InfoWindow(
+    {
+	// i dont think this is right?
+      //size: new google.maps.Size(150,50)
+      maxWidth: 284
+    });
+
+  // A function to create the marker and set up the event window function
+  //this genrate the marker which genrate on clik
+  function createMarker(latlng, name, html) {
+    var contentString = html;
+    var marker = new google.maps.Marker({
+      position: latlng,
+      draggable: true ,
+      map: map,
+      zIndex: Math.round(latlng.lat()*-100000)<<5,
+      icon: '/assets/general.png',
+    });
+
+    google.maps.event.addListener(marker, 'click', function() {
+      infowindow.setContent('');;
+      infowindow.close();
+      infowindow.setContent(contentString);
+      infowindow.open(map,marker);
+      $('.map-title').css('z-index',-1);
+    });
+
+    google.maps.event.addListener(infowindow,'closeclick',function(){
+      marker.setMap(null);
+      check = null;
+    });
+    //update latlon if dragged
+    google.maps.event.addListener(marker,'dragend',function(event) {
+      var lat = event.latLng.lat();
+      var lng = event.latLng.lng();
+      $("input[id=location_latitude]").val(lat);
+      $("input[id=location_longitude]").val(lng);
+    });
+    google.maps.event.trigger(marker, 'click');
+      return marker;
+  }
+
+    // so it won't submit
+    //we can create a marker while passing the array on it
+  function mapMarkers(data){
+    var markers = data
+    var  i;
+    var bounds = new google.maps.LatLngBounds();
+
+    for (i = 0; i < markers.length; i++) {
+
+        var pos = new google.maps.LatLng(markers[i][1], markers[i][2]);
+
+        bounds.extend(pos);
+
+        gmarker = new google.maps.Marker({
+          position: pos,
+          icon: markers[i][3],
+          map: map
+        });
+       markersArray.push(gmarker);
+        google.maps.event.addListener(gmarker, 'click', (function(gmarker, i) {
+
+          return function() {
+            $('.map-title').css('z-index',-1);
+	    map.setOptions({zoomControl:false, streetViewControl:false});
+            popup = addressPopup(map,gmarker,markers,i);
+          }
+
+        })(gmarker, i));
+
+
+      }
+    if (chkHash==null) {
+	map.fitBounds(bounds);
+	useLocationAuto();
+    }
+    else{
+	document.getElementById('overlay').style.display = 'none';
+    }
+    // Create cluster for all the pins in a region
+    var mcOptions = { maxZoom: null,
+                    zoomOnClick: false,
+                    "styles": [{
+                    height: 53,
+                    url: "/assets/m1.png",
+                    width: 53
+                    },
+                    {
+                    height: 56,
+                    url: "/assets/m2.png",
+                    width: 56
+                    },
+                    {
+                    height: 66,
+                    url: "/assets/m3.png",
+                    width: 66
+                    },
+                    {
+                    height: 78,
+                    url: "/assets/m4.png",
+                    width: 78
+                    },
+                    {
+                    height: 90,
+                    url: "/assets/m5.png",
+                    width: 90}],
+                 minimumClusterSize: 2 };
+    var markerCluster = new MarkerClusterer(map,markersArray, mcOptions);
+    //markerCluster.maxViewZoom = 18;
+      google.maps.event.addListener(markerCluster, 'click', function(cluster) {
+          //if (map.getZoom() >= markerCluster.maxViewZoom) {
+              // If we're already at max zoom, show a popup with the
+              // list of workspecs in the cluster
+          //    console.log('Max zoom');
+          //    displayClusterInfo(cluster);
+	  //    $('.map-title').css('z-index',-1);
+          //} else {
+             displayClusterInfo(cluster);
+	      //zoomToCluster(markerCluster,map,cluster);
+          //}
+      });
+
+  }
+
+
+function zoomToCluster(markerCluster,map, cluster) {
+    // Modified copy of default zoom function from markerClustererPlus
+    // Zoom into the cluster.
+    //mz = markerCluster.getMaxZoom();
+    mz = markerCluster.maxViewZoom;
+    theBounds = cluster.getBounds();
+    map.fitBounds(theBounds);
+    // There is a fix for Issue 170 here:
+    setTimeout(function () {
+        map.fitBounds(theBounds);
+        // Don't zoom beyond the max zoom level
+        // Because fitBounds will zoom, this check we didn't zoom too
+        // far
+        if (mz !== null && (map.getZoom() > mz)) {
+            map.setZoom(mz + 1);
+        }
+    }, 100);
+}
+
+function displayClusterInfo(cluster) {
+    var markers = cluster.getMarkers();
+    $('.map-title').css('z-index',-1);
+    map.setOptions({zoomControl:false, streetViewControl:false});
+    var info = new google.maps.MVCObject;
+    info.set('position', cluster.getCenter());
+    getTopThreeMarkers(info,markers);
+}
+
+function deleteMarker() {
+  for (i = 0; i < markersArray.length; i++) {
+     markersArray[i].setMap(null);
+}
+}
+
+  function boxclick(box,category) {
+    if (box.checked) {
+      show(category);
+    } else {
+      hide(category);
+    }
+        // == rebuild the side bar
+  }
+
+  function timeclick(box,category){
+    if (box.checked) {
+      showtime(category);
+    } else {
+      hidetime(category);
+    }
+  }
+
+  function clearOverlays() {
+
+    for (var i = 0; i < gmarkers.length; i++ ) {
+
+
+    }
+
+  }
+
+  //this is for select radio button then give the value
+  function selectTime(box,category){
+    findtime(category);
+  }
+
+  function Mob_selectTime(box,category){
+    findtime_mob(category);
+  }
+
+
+
+
+
+//this is for mobile
+function findtime_mob(value){
+    deleteMarker()
+
+    // clearOverlays()//function calling for set the map null not working :(
+    $.ajax({
+      url: '/'+value, //sumbits it to the given url of the form
+      data: 'mapvalue',
+      dataType: "JSON" // you want a difference between normal and ajax-calls, and json is standard
+    }).success(function(mapvalue){
+        //act on result.
+
+ //boxes
+  var boxes1 =  $('input:checkbox[name="ch[]"]:checked')
+
+      gmarkers =[]
+      my = []
+      gmarkers = mapvalue
+
+if (boxes1.length==0){
+  mapMarkers(gmarkers)
+
+}
+
+if(boxes1.length>0){
+
+$(boxes1).each(function(){
+
+show($(this).attr('id'))
+    //do stuff here with this
+});
+}
+
+
+    });
+
+
+}
+
+
+
+  //this is for finding the marker according to the time
+  function findtime(value){
+
+
+    deleteMarker()
+
+    // clearOverlays()//function calling for set the map null not working :(
+    $.ajax({
+      url: '/'+value, //sumbits it to the given url of the form
+      data: 'mapvalue',
+      dataType: "JSON" // you want a difference between normal and ajax-calls, and json is standard
+    }).success(function(mapvalue){
+        //act on result.
+
+ //boxes = $('input[class="selectall"]:checked')
+
+ var  boxes =  $('input:checkbox[name="chk[]"]:checked')
+  var boxes1 =  $('input:checkbox[name="ch[]"]:checked')
+
+      gmarkers =[]
+      my = []
+      gmarkers = mapvalue
+
+if (boxes.length== 0){
+  mapMarkers(gmarkers)
+}
+
+if (boxes1.length==0){
+  mapMarkers(gmarkers)
+
+}
+
+if(boxes.length>0){
+$(boxes).each(function(){
+
+show($(this).attr('id'))
+    //do stuff here with this
+});
+}
+if(boxes1.length>0){
+
+$(boxes).each(function(){
+
+show($(this).attr('id'))
+    //do stuff here with this
+});
+}
+
+
+    });
+  }
+
+  //function for showing the markers
+  function show(category) {
+      deleteMarker()
+
+    for (var i=0; i<gmarkers.length; i++) {
+      if (gmarkers[i][7]== category) {
+        my.push(gmarkers[i]);
+      }
+    }
+    mapMarkers(my)//set the map from here
+        // == check the checkbox ==
+   //document.getElementById(category+"box").checked = true;
+
+  }
+
+// == hides all markers of a particular category, and ensures the checkbox is cleared ==
+  function hide(category) {
+      deleteMarker()
+
+    for (var i=0; i<my.length; i++) {
+      if (my[i][7] == category) {
+        my.splice(i,1)
+        i--;
+      }
+    }
+    mapMarkers(my)
+        // == clear the checkbox ==
+   //document.getElementById(category+"box").checked = false;
+        // == close the info window, in case its open on a marker that we just hid
+    //map.closeInfoWindow();
+  }
+
+//popup a location while calling the function
+
+  function addressPopup(map,marker,markers,i){
+    $.ajax({
+      url: 'locations/'+markers[i][6]+'/address', //sumbits it to the given url of the form
+      data: 'locationaddress',
+      dataType: "HTML" // you want a difference between normal and ajax-calls, and json is standard
+    }).success(function(locationaddress){
+    //act on result.
+      infowindow.setContent(locationaddress);
+      infowindow.open(map, marker);
+    });
+  }
+
+   // Check If Marker Is In Database
+   function checkMarkerDefined(markers)
+   {
+       var markerIds = [];
+       results = _.intersection(markersArray, markers);
+       for (var i =0; i<results.length; i++){
+          markerIds.push([results[i]["position"].pb,results[i]["position"].ob] );
+       }
+      return markerIds;
+   }
+
+   //Get Top 3 Marker from Database Based On Votes Count
+   function getTopThreeMarkers(cluster,markers){
+    markerIds =  checkMarkerDefined(markers);
+    $.ajax({
+        url: '/locations/markers/top_three_markers', //sumbits it to the given url of the form
+        type: "GET",
+        data: {locations: JSON.stringify(markerIds)},
+        dataType: "HTML"
+
+        }).success(function(top_three_markers){
+                browserWidth = $(window).width();
+
+                if(browserWidth <= 480)
+                {
+                  infoWindowsize = getInfoWindowSize(browserWidth);
+                  infowindow.setOptions({maxWidth:infoWindowsize });
+                }
+                infowindow.setContent(top_three_markers);
+                infowindow.open(map,cluster);
+
+        });
+}
+function useLocationAuto(){
+    var browserSupportFlag = new Boolean();
+    if(navigator.geolocation) {
+      browserSupportFlag = true;
+      navigator.geolocation.getCurrentPosition(function(position) {
+        initialLocation = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
+        if (marker) {
+          marker.setMap(null);
+          marker = null;
+        }
+
+	//computes distance of array of markers with current location
+	for ( var i = 0; i < markersArray.length; i++ ) {
+	    markersArray[i].distance = google.maps.geometry.spherical.computeDistanceBetween(initialLocation, markersArray[i].position);
+	}
+	//will this affect how users intereact with the markers, i.e. vote up or down
+	markersArray.sort(function(a,b){return a.distance-b.distance});
+	var bounds = new google.maps.LatLngBounds(initialLocation);
+	bounds.extend(markersArray[4].position);
+	map.fitBounds(bounds);
+	document.getElementById('overlay').style.display = 'none';		
+        setTimeout(function() {
+          marker = new google.maps.Marker({
+            position: initialLocation,
+            draggable: false ,
+            map: map,
+            zIndex: 1000,
+            icon: '/assets/search_pin.png',
+            animation: google.maps.Animation.DROP
+          });
+	  
+        }, 600);
+      }, function() {
+        handleNoGeolocation(browserSupportFlag);
+      });
+    }
+    // Browser doesn't support Geolocation
+    else {
+      browserSupportFlag = false;
+      handleNoGeolocation(browserSupportFlag);
+    }
+
+    function handleNoGeolocation(errorFlag) {
+      if (errorFlag == true) {
+        alert("Geolocation service failed.");
+      } else {
+        alert("Your browser doesn't support geolocation.");
+      }
+      document.getElementById('overlay').style.display = 'none';
+    }
+  };
+
+// Function for Show InfoWindow After Click on Zoom in Icon
+function showMarkerinfoOnZoom(latDetails,longDetails)
+{   infowindow.close();
+    map.setCenter(new google.maps.LatLng(latDetails,longDetails));
+    if(map.getZoom() <17)
+    {
+     map.setZoom(17);
+    }
+    locationDetails = {lat: latDetails, long:longDetails};
+    marker = findMarkerByLocation(markersArray,locationDetails);
+    google.maps.event.trigger(marker, 'click');
+}
+
+ function initialize(data1) {
+ //after sign in user allowed to click on map to add Location
+  check =null;
+  //remove the # from the hash string, as URLON starts parsing from the underscore
+    var hash = location.hash;
+
+    var urlMapOptions = {};
+    //check if hash exists, and is a hash with a URLON object string
+     if(hash == '')
+     {
+         url_params = parseURL(window.location.href);
+         if(url_params.path && url_params.path.length >1)
+         {
+             locationDetails = getLocationByName(url_params.path);
+             if(locationDetails)
+             {
+               urlMapOptions = {long: locationDetails.longitude.toString(), lat: locationDetails.latitude.toString(), zoom: "16"}
+               markerDetails = urlMapOptions;
+               showMarkerInfo = true;
+                 chkHash = 1;
+             }
+         }
+     }
+     else if (hash != '' && hash.substr(0,3) === '#_l'){
+        //remove the # from the hash string, as URLON starts parsing from the underscore
+        urlMapOptions = URLON.parse(hash.substr(1, hash.length));
+        markerDetails = urlMapOptions;
+        showMarkerInfo = true;
+        chkHash = 1;
+     }
+
+    // create the map
+    // Set Zoom Level to 16 to show Details If infowindow has large contents
+  var myOptions = {
+    zoom: (urlMapOptions.zoom) ? parseFloat(urlMapOptions.zoom - 1) : 2,
+    minZoom: 2,
+    //Commented out for sensing
+    center: (urlMapOptions.lat && urlMapOptions.long) ? new google.maps.LatLng(parseFloat(urlMapOptions.lat), parseFloat(urlMapOptions.long)) : new google.maps.LatLng(43.7, -79.4),
+    mapTypeControl: true,
+    zoomControl: true,
+    streetViewControl: true,
+    styles: grayStyles,
+    mapTypeControlOptions: {style: google.maps.MapTypeControlStyle.DROPDOWN_MENU},
+    navigationControl: true,
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  }
+  map = new google.maps.Map(document.getElementById("map_canvas"),myOptions);
+  var inputField = document.getElementById('searchTextField');
+  var mobile = document.getElementById('searchTextFieldHeader');
+  autocomplete = new google.maps.places.Autocomplete(inputField);
+  var autocomplete_mobile = new google.maps.places.Autocomplete(mobile);
+
+  google.maps.event.addListener(infowindow,'closeclick',function(){
+    $('.map-title').css('z-index',998);
+    map.setOptions({zoomControl:true, streetViewControl:true});
+  });
+  google.maps.event.addListener(map, 'click', function() {
+    infowindow.close();
+    $('.map-title').css('z-index',998);
+    map.setOptions({zoomControl:true, streetViewControl:true});
+  });
+
+  google.maps.event.addListener(map, 'click', function(event) {
+    if(check == 1 || check == 2){
+      check=2; //to prevent autocomplete placements
+                   //call function to create marker
+      if (marker) {
+        marker.setMap(null);
+        marker = null;
+      }
+
+      var lat = event.latLng.lat();
+      var lng = event.latLng.lng();
+
+     marker = createMarker(event.latLng, "name", foo);
+
+     $("input[id=location_latitude]").val(lat);
+     $("input[id=location_longitude]").val(lng);
+
+      $(".submit_popup").html(" <a  herf = '#' onclick='myClosePopup();'>[X]</a><h5>Awesome!</h5><h2>Try dragging the pin and adjusting zoom level to refine.</h2>");
+      $(".submit_popup").delay(2500).fadeOut();
+      //$("#submit_form1").html("<a  herf ='#'onclick='myClosePopup();'>[X]</a><h3>Awesome!</h3>Drag the pin and adjust zoom level to refine");
+     }
+  });
+  function setMarkerForSearch(place) {
+    if (check ==2) {
+      marker.setMap(map);
+      marker.setPosition(place.geometry.location);
+      var lat = place.geometry.location.lat();
+      var lng = place.geometry.location.lng();
+      $("input[id=location_latitude]").val(lat);
+      $("input[id=location_longitude]").val(lng);
+    }
+    else {
+      if (marker) {
+        marker.setMap(null);
+        marker = null;
+      }
+
+      setTimeout(function() {
+	if (marker) {
+	    marker.setMap(null);
+	    marker = null;
+	  }
+        marker = new google.maps.Marker({
+          position: place.geometry.location,
+          draggable: false ,
+          map: map,
+          zIndex: 1000,
+          icon: '/assets/search_pin.png',
+          animation: google.maps.Animation.DROP
+        });
+      }, 600);
+    }
+  };
+  google.maps.event.addListener(autocomplete, 'place_changed', function() {
+    var place = autocomplete.getPlace();
+    if (place.geometry){
+      map.panTo(place.geometry.location);
+      map.setZoom(17);  // Why 17? Because it looks good.
+      setMarkerForSearch(place);
+    }
+  });
+  $(".search-query").focusin(function () {
+    $(document).keypress(function (e) {
+        if (e.which == 13) {
+            $(".search-query").trigger('focus');
+            $(".search-query").simulate('keydown', { keyCode: $.ui.keyCode.DOWN } ).simulate('keydown', { keyCode: $.ui.keyCode.ENTER });
+        }
+    });
+});
+    $(".search-query").focusout(function () {
+	$(document).unbind("keypress"); //for autocomplete
+});
+
+  //for mobile
+
+  google.maps.event.addListener(autocomplete_mobile, 'place_changed', function() {
+    var place = autocomplete_mobile.getPlace();
+    if (place.geometry){
+      map.panTo(place.geometry.location);
+      map.setZoom(17);  // Why 17? Because it looks good.
+      setMarkerForSearch(place);
+    }
+
+  });
+
+  google.maps.event.addListener(map, 'idle', function() {
+    autocomplete_mobile.setBounds(map.getBounds());
+    autocomplete.setBounds(map.getBounds());
+
+  });
+
+  //for new visuals
+  google.maps.event.addListener(map, 'idle', function(){
+    jQuery('.gm-style').removeClass('gm-style');
+  });
+    
+  //for copying to clipboard and closing window of cluster
+  google.maps.event.addListener(infowindow, 'domready', function() {
+    //couldnt figure out a better way to do this
+    $('.loc').click(function (){
+	//map.setZoom(map.getZoom()+10);
+	});
+    $('#post-submit').on('submit', function() {
+       $(this).find('input[type="submit"]').attr('disabled', 'disabled');
+    })
+    var clip = new ZeroClipboard($("#d_clip_button"))
+
+    clip.on( 'mousedown', function(client) {
+        $(".article-text").fadeIn();
+
+      } );
+    clip.on( 'mouseup', function(client) {
+        $(".article-text").delay(1900).slideUp();
+      } );
+    });
+
+  //for zoom to a location
+  $('.myloc-icon').click(function (){
+	useLocationAuto();
+	});
+
+//while clicking time it check all the checkbox
+ // $('.time_select  ').click(function () {
+ //    $('.selectedId').prop('checked',false);
+ //    $('.selectall').prop('checked',false);
+ //  });
+
+  //for click all button and do his work
+  $('#check_all').click(function () {
+    $('.selectedId').prop('checked', this.checked);
+      if (this.checked){
+
+       for (var i=0; i<gmarkers.length; i++) {
+
+        my.push(gmarkers[i]);
+       }
+
+        mapMarkers(gmarkers);
+      }
+      if (!this.checked){
+
+
+
+         my = []
+         deleteMarker()
+      }
+
+    $('.selectedId').change(function () {
+
+      var check = ($('.selectedId').filter(":checked").length == $('.selectedId').length);
+ $('#check_all').prop('checked',check);
+    });
+  });
+
+
+  //for mobile
+    $('.selectall').click(function () {
+
+    $('.mob_selectedId').prop('checked', this.checked);
+      if (this.checked){
+
+       for (var i=0; i<gmarkers.length; i++) {
+
+        my.push(gmarkers[i]);
+       }
+
+        mapMarkers(gmarkers);
+      }
+      if (!this.checked){
+
+
+
+         my = []
+         deleteMarker()
+      }
+
+    $('.mob_selectedId').change(function () {
+
+
+      var check = ($('.mob_selectedId').filter(":checked").length == $('.mob_selectedId').length);
+
+ $('.selectall').prop('checked',false);
+    });
+  });
+
+
+  //this load the markers at the time of page load
+  $(document).ready(function() {
+     $('.selectedId').prop('checked',false);
+     $('.selectall').prop('checked',false);
+     $('.mob_selectedId').prop('checked',false);
+     $('.check_all').prop('checked',false);
+
+     $('.time_select').prop('checked',true);
+     $.getJSON('<%= root_url%>', function(data){
+      // // loop  and add marker
+        gmarkers = data
+        mapMarkers(gmarkers);
+
+         // show marker info by title if User comes Directally from using Url
+         if(showMarkerInfo){
+             marker = findMarkerByLocation(markersArray,markerDetails);
+             google.maps.event.trigger(marker, 'click');
+         }
+     });
+  });
+}
+
+//]]>
+<%end%>
